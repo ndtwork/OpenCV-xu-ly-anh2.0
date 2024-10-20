@@ -2,11 +2,10 @@ import cv2
 import cv2 as cv
 
 import os
+
 project_dir = os.path.dirname(os.path.dirname(__file__))  # Get the project directory
 image_path = os.path.join(project_dir, "Image_for_TeamSV", "car.jpg")
-
-
-img = cv.imread(r"C:\Users\nguye\PycharmProjects\openCVtest2\Image_for_TeamSV\car.jpg")
+img = cv.imread(image_path)
 
 # Kiểm tra nếu ảnh được đọc thành công
 if img is None:
