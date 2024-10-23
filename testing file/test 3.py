@@ -1,10 +1,20 @@
 import cv2 as cv
 import numpy as np
-
 import os
 
-project_dir = os.path.dirname(os.path.dirname(__file__))  # Get the project directory
+# Get the current working directory
+current_dir = os.getcwd()
+
+# Move up one directory to the project folder (e.g., from "testing file" to "openCVtest2")
+project_dir = os.path.dirname(current_dir)
+
+# Now, navigate to the "Image_for_TeamSV" folder and select the image
 image_path = os.path.join(project_dir, "Image_for_TeamSV", "car.jpg")
+
+# Check the image path
+print("Image path:", image_path)
+
+# Load the image
 img = cv.imread(image_path)
 
 # Kiểm tra xem ảnh có được tải thành công không
@@ -40,3 +50,5 @@ else:
     # Đợi phím bất kỳ để đóng cửa sổ
     cv.waitKey(0)
     cv.destroyAllWindows()
+
+
