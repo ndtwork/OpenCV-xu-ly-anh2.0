@@ -5,7 +5,7 @@ import os
 
 # Đọc ảnh gốc
 project_dir = os.path.dirname(os.path.dirname(__file__))
-image_path = os.path.join(project_dir, "Image_for_TeamSV", "car.jpg")
+image_path = os.path.join(project_dir, "Image_for_TeamSV", "car.png")
 img_color = cv2.imread(image_path)
 
 # Chuyển đổi sang ảnh xám
@@ -28,9 +28,9 @@ plt.subplot(2, 3, 1)
 plt.imshow(img_gray, cmap='gray')
 plt.title('Ảnh xám')
 
-# Hiển thị biểu đồ histogram của ảnh xám
+# Hiển thị biểu đồ histogram của ảnh xám dưới dạng cột
 plt.subplot(2, 3, 4)
-plt.plot(hist_gray, color='black')
+plt.bar(range(256), hist_gray.ravel(), color='gray', width=1)
 plt.title('Histogram - Ảnh xám')
 plt.xlim([0, 256])
 
