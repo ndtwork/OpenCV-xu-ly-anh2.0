@@ -6,6 +6,8 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
 class ImageFilterApp(QMainWindow):
@@ -39,12 +41,11 @@ class ImageFilterApp(QMainWindow):
         self.filtered_label.setStyleSheet("border: 1px solid black; background-color: white;")
         self.top_layout.addWidget(self.create_image_box(self.filtered_label_title, self.filtered_label))
 
-        # Bottom Layout
-        self.bottom_widget = QLabel("Graph will display here.")
-        self.bottom_widget.setAlignment(Qt.AlignCenter)
-        self.bottom_widget.setFixedHeight(200)
-        self.bottom_widget.setStyleSheet("border: 1px solid black; background-color: lightgray;")
-        self.main_layout.addWidget(self.bottom_widget)
+        # Bottom Layout with Matplotlib Canvas
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
+        self.canvas.setMinimumHeight(200)
+        self.main_layout.addWidget(self.canvas)
 
         # Create Menu Bar
         self.create_menu_bar()
@@ -133,7 +134,8 @@ class ImageFilterApp(QMainWindow):
     def clear_images(self):
         self.original_label.clear()
         self.filtered_label.clear()
-        self.bottom_widget.setText("Graph will display here.")
+        self.figure.clear()
+        self.canvas.draw()
 
     def apply_low_pass_filter(self):
         kernel = np.ones((3, 3)) / 9
@@ -176,7 +178,16 @@ class ImageFilterApp(QMainWindow):
         filtered_qimage = self.array_to_qimage(filtered_array)
         pixmap = QPixmap.fromImage(filtered_qimage)
         self.filtered_label.setPixmap(pixmap)
-        self.bottom_widget.setText(message)
+        self.plot_histogram(filtered_array)
+
+    def plot_histogram(self, array):
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        ax.hist(array.ravel(), bins=256, color='gray', alpha=0.7)
+        ax.set_title("Pixel Intensity Distribution")
+        ax.set_xlabel("Intensity")
+        ax.set_ylabel("Frequency")
+        self.canvas.draw()
 
     def qimage_to_gray_array(self, image):
         ptr = image.bits()
