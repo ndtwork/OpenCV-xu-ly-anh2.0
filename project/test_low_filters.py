@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from linear_filters import mean_filter, gaussian_filter
 
 # Đọc ảnh đầu vào bằng OpenCV (ảnh màu)
-image = cv2.imread('car.jpg', cv2.IMREAD_COLOR)
+image = cv2.imread('project\car.jpg', cv2.IMREAD_COLOR)
 
 # Chuyển đổi từ BGR sang RGB để hiển thị đúng màu
 image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

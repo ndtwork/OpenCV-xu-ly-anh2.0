@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from linear_filters import mean_filter, gaussian_filter
 
 # Đọc ảnh màu
-image = cv2.imread('car.jpg', cv2.IMREAD_COLOR)
+image = cv2.imread('project\car.jpg', cv2.IMREAD_COLOR)
 
 # Tách các kênh màu BGR
 b, g, r = cv2.split(image)
