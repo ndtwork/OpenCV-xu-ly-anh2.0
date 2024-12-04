@@ -2,16 +2,50 @@ import sys
 import numpy as np
 from scipy.ndimage import convolve, median_filter, minimum_filter, maximum_filter
 from PyQt5.QtWidgets import (
-    QApplication, QLabel, QMainWindow, QFileDialog, QAction, QMessageBox, QVBoxLayout, QHBoxLayout, QWidget
+    QApplication, QLabel, QMainWindow, QFileDialog, QAction, QMessageBox, QVBoxLayout, QHBoxLayout, QWidget,
+    QDialog, QLineEdit, QGridLayout, QPushButton, QInputDialog
 )
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt
 
 
+class CustomFilterDialog(QDialog):
+    def __init__(self, parent=None, size=3):
+        super().__init__(parent)
+        self.size = size
+        self.setWindowTitle(f"Custom {size}x{size} Filter")
+        self.entries = []
+
+        self.layout = QGridLayout(self)
+
+        # Create input grid for the filter values
+        for i in range(size):
+            row = []
+            for j in range(size):
+                entry = QLineEdit(self)
+                entry.setPlaceholderText(f"({i+1},{j+1})")
+                self.layout.addWidget(entry, i, j)
+                row.append(entry)
+            self.entries.append(row)
+
+        # Add Apply button
+        self.apply_button = QPushButton("Apply Filter", self)
+        self.apply_button.clicked.connect(self.apply_filter)
+        self.layout.addWidget(self.apply_button, size, 0, 1, size)
+
+    def apply_filter(self):
+        try:
+            # Convert user input to a numeric numpy array
+            custom_filter = np.array([[eval(entry.text()) for entry in row] for row in self.entries])
+            self.parent().apply_custom_filter(custom_filter)
+            self.accept()
+        except Exception:
+            QMessageBox.warning(self, "Error", "Invalid input! Please enter valid numbers or fractions.")
+
+
 class ImageFilterApp(QMainWindow):
     def __init__(self):
         super().__init__()
-
         self.setGeometry(100, 100, 1400, 800)
         self.setWindowTitle("Image Filter Application")
         self.image = None  # Store the imported image
@@ -93,6 +127,10 @@ class ImageFilterApp(QMainWindow):
         derivative_action.triggered.connect(self.apply_derivative_filter)
         linear_menu.addAction(derivative_action)
 
+        custom_filter_action = QAction("Custom Filter", self)
+        custom_filter_action.triggered.connect(self.open_custom_filter_dialog)
+        linear_menu.addAction(custom_filter_action)
+
         non_linear_menu = menu_bar.addMenu("Non-linear Filters")
         median_action = QAction("Median Filter", self)
         median_action.triggered.connect(self.apply_median_filter)
@@ -134,6 +172,21 @@ class ImageFilterApp(QMainWindow):
         self.original_label.clear()
         self.filtered_label.clear()
         self.bottom_widget.setText("Graph will display here.")
+
+    def open_custom_filter_dialog(self):
+        size, ok = QInputDialog.getItem(self, "Select Filter Size", "Choose filter size:", ["3x3", "5x5"], 0, False)
+        if ok:
+            size = 3 if size == "3x3" else 5
+            dialog = CustomFilterDialog(self, size)
+            dialog.exec_()
+
+    def apply_custom_filter(self, custom_filter):
+        if self.image is None:
+            QMessageBox.warning(self, "Error", "No image imported!")
+            return
+        gray_image = self.qimage_to_gray_array(self.image)
+        filtered_array = convolve(gray_image, custom_filter, mode='constant', cval=0.0)
+        self.display_filtered_image(filtered_array, "Custom Filter Applied")
 
     def apply_low_pass_filter(self):
         kernel = np.ones((3, 3)) / 9
