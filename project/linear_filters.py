@@ -78,7 +78,7 @@ def high_pass_filter(image):
     """
     # Kernel lọc thông cao (kết hợp bộ lọc edge detection)
     kernel = np.array([[-1, -1, -1],
-                       [-1, 9, -1],
+                       [-1, 8, -1],
                        [-1, -1, -1]])
 
     if len(image.shape) == 3:  # Nếu là ảnh màu (3 kênh)
@@ -97,7 +97,6 @@ def high_pass_filter(image):
         filtered_image = convolve(image, kernel)
 
     return filtered_image
-
 
 """Lọc đạo hàm"""
 

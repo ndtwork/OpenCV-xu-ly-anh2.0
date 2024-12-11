@@ -17,7 +17,7 @@ def plot_color_histogram(image):
     alpha_b = 0.114
 
     # Tạo histogram cho từng kênh
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(9, 3))
     plt.hist(r.ravel(), bins=256, range=(0, 256), color='red', alpha=alpha_r, label='Red')
     plt.hist(g.ravel(), bins=256, range=(0, 256), color='green', alpha=alpha_g, label='Green')
     plt.hist(b.ravel(), bins=256, range=(0, 256), color='blue', alpha=alpha_b, label='Blue')
@@ -28,7 +28,6 @@ def plot_color_histogram(image):
     plt.ylabel("Frequency")
     plt.legend(loc='upper right')
     plt.show()
-
 
 
 # Đọc ảnh màu

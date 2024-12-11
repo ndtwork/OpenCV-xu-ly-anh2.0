@@ -1,6 +1,6 @@
 import cv2
 import matplotlib.pyplot as plt
-from linear_filters import high_pass_filter
+from linear_filters_new import high_pass_filter
 
 # Đọc ảnh đầu vào (ảnh màu)
 image = cv2.imread('car.jpg', cv2.IMREAD_COLOR)
@@ -23,3 +23,4 @@ plt.imshow(cv2.cvtColor(high_pass_filtered, cv2.COLOR_BGR2RGB))
 
 plt.tight_layout()
 plt.show()
+

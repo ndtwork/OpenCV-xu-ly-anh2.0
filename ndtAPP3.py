@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from scipy.ndimage import convolve, median_filter, minimum_filter, maximum_filter
+import cv2
 from PyQt5.QtWidgets import (
     QApplication, QLabel, QMainWindow, QFileDialog, QAction, QMessageBox, QVBoxLayout, QHBoxLayout, QWidget,
     QDialog, QGridLayout, QLineEdit, QPushButton, QComboBox, QWidgetAction
@@ -59,7 +59,7 @@ class MultiFilterDialog(QDialog):
         else:  # Step 2: Collect filter values
             try:
                 filter_values = np.array([
-                    [eval(entry.text()) for entry in row]
+                    [float(entry.text()) for entry in row]
                     for row in self.filter_entries
                 ])
                 self.filters.append(filter_values)
@@ -72,7 +72,7 @@ class MultiFilterDialog(QDialog):
                     self.next_button.hide()
                     self.apply_button.show()
             except Exception:
-                QMessageBox.warning(self, "Error", "Invalid filter values! Please enter numbers or fractions.")
+                QMessageBox.warning(self, "Error", "Invalid filter values! Please enter numbers.")
 
     def create_filter_grid(self):
         # Reset grid layout
@@ -101,7 +101,7 @@ class ImageFilterApp(QMainWindow):
         self.setGeometry(100, 100, 1400, 800)
         self.setWindowTitle("Image Filter Application")
         self.image = None  # Store the imported image
-        self.filter_size = 3  # Mặc định bộ lọc 3x3
+        self.filter_size = 3  # Default filter size is 3x3
 
         # Main Widget and Layout
         self.central_widget = QWidget()
@@ -167,16 +167,15 @@ class ImageFilterApp(QMainWindow):
         # Linear Filters menu
         linear_menu = menu_bar.addMenu("Linear Filters")
 
-        # Thêm QComboBox vào menu dưới dạng hành động hoặc widget con
+        # Add QComboBox to menu as a widget
         filter_size_action = QAction("Filter Size", self)
-        filter_size_action.setDisabled(True)  # Hành động không sử dụng được, chỉ là tiêu đề
+        filter_size_action.setDisabled(True)
         linear_menu.addAction(filter_size_action)
 
         self.filter_size_combo = QComboBox(self)
         self.filter_size_combo.addItems(["3x3", "5x5"])
         self.filter_size_combo.currentIndexChanged.connect(self.change_filter_size)
 
-        # Thêm combobox vào menu bằng QWidgetAction
         widget_action = QWidgetAction(self)
         widget_action.setDefaultWidget(self.filter_size_combo)
         linear_menu.addAction(widget_action)
@@ -192,7 +191,6 @@ class ImageFilterApp(QMainWindow):
         derivative_action = QAction("Derivative Filter", self)
         derivative_action.triggered.connect(self.apply_derivative_filter)
         linear_menu.addAction(derivative_action)
-
 
         # Non-linear Filters menu
         non_linear_menu = menu_bar.addMenu("Non-linear Filters")
@@ -215,88 +213,75 @@ class ImageFilterApp(QMainWindow):
         custom_menu.addAction(multi_filter_action)
 
     def change_filter_size(self):
-        size = self.filter_size_combo.currentText()  # Lấy kích thước bộ lọc từ combobox
-        if size == "3x3":
-            self.filter_size = 3  # Chọn bộ lọc 3x3
-        elif size == "5x5":
-            self.filter_size = 5  # Chọn bộ lọc 5x5
-        print(f"Selected filter size: {self.filter_size}x{self.filter_size}")  # In kích thước ra console
+        size = self.filter_size_combo.currentText()
+        self.filter_size = int(size.split('x')[0])
+        print(f"Selected filter size: {self.filter_size}x{self.filter_size}")
 
     def load_image(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Image", "", "Images (*.png *.jpg *.bmp *.jpeg)")
         if file_path:
-            self.image = QImage(file_path)
-            if self.image.isNull():
+            # Load ảnh với OpenCV
+            self.image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+            if self.image is None:
                 QMessageBox.warning(self, "Error", "Failed to load image.")
-            else:
-                pixmap = QPixmap.fromImage(self.image)
+                return
+            # Hiển thị ảnh lên QLabel
+            pixmap = self.array_to_pixmap(self.image)
+            if pixmap:
                 self.original_label.setPixmap(pixmap)
+            else:
+                QMessageBox.warning(self, "Error", "Failed to convert image for display.")
 
     def save_filtered_image(self):
-        if not self.filtered_label.pixmap():
+        if self.filtered_label.pixmap() is None:
             QMessageBox.warning(self, "Error", "No filtered image to save!")
             return
 
         file_path, _ = QFileDialog.getSaveFileName(self, "Save Filtered Image", "", "Images (*.png *.jpg *.bmp *.jpeg)")
         if file_path:
-            self.filtered_label.pixmap().save(file_path)
+            pixmap = self.filtered_label.pixmap()
+            pixmap.save(file_path)
 
     def apply_low_pass_filter(self):
-        if self.filter_size_combo.currentText() == "3x3":
-            kernel = np.ones((3, 3)) / 9
-        else:
-            kernel = np.ones((5, 5)) / 25
+        kernel = np.ones((self.filter_size, self.filter_size), np.float32) / (self.filter_size ** 2)
         self.apply_filter(kernel, "Low-Pass Filter Applied")
 
     def apply_high_pass_filter(self):
-        if self.filter_size_combo.currentText() == "3x3":
-            kernel = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
-        else:
-            kernel = np.array([[-1, -1, -1, -1, -1], [-1, -1, -1, -1, -1], [-1, -1, 24, -1, -1], [-1, -1, -1, -1, -1],
-                               [-1, -1, -1, -1, -1]])
+        size = self.filter_size
+        kernel = -1 * np.ones((size, size), np.float32)
+        kernel[size // 2, size // 2] = (size ** 2) - 1
         self.apply_filter(kernel, "High-Pass Filter Applied")
 
     def apply_derivative_filter(self):
-        # Tạo tùy chọn bộ lọc Sobel theo chiều ngang hoặc dọc
-        kernel_choice = QMessageBox.question(self, "Choose Sobel Filter",
-                                             "Select Sobel filter:\n1. Horizontal\n2. Vertical\n3. Combine Horizontal and Vertical",
-                                             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-
-        if kernel_choice == QMessageBox.StandardButton.Yes:
-            kernel = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])  # Sobel Horizontal Filter
-            self.apply_filter(kernel, "Sobel Horizontal Filter Applied")
-        elif kernel_choice == QMessageBox.StandardButton.No:
-            kernel = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])  # Sobel Vertical Filter
-            self.apply_filter(kernel, "Sobel Vertical Filter Applied")
-        else:
-            # Kết hợp Sobel Horizontal và Vertical
-            kernel_h = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])  # Horizontal Filter
-            kernel_v = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])  # Vertical Filter
-            image_h = self.apply_filter(kernel_h, "Sobel Horizontal Filter Applied", return_image=True)
-            image_v = self.apply_filter(kernel_v, "Sobel Vertical Filter Applied", return_image=True)
-
-            # Kết hợp ảnh từ cả hai chiều
-            combined_image = np.sqrt(image_h ** 2 + image_v ** 2)  # Độ lớn của gradient (cộng dồn chiều ngang và dọc)
-            self.display_filtered_image(combined_image, "Sobel Combined Filter Applied")
+        horizontal = cv2.Sobel(self.image, cv2.CV_64F, 1, 0, ksize=self.filter_size)
+        vertical = cv2.Sobel(self.image, cv2.CV_64F, 0, 1, ksize=self.filter_size)
+        magnitude = np.sqrt(horizontal**2 + vertical**2)
+        self.display_filtered_image(magnitude, "Sobel Filter Applied")
 
     def apply_median_filter(self):
-        self.apply_non_linear_filter(lambda x: median_filter(x, size=3), "Median Filter Applied")
+        result = cv2.medianBlur(self.image, self.filter_size)
+        self.display_filtered_image(result, "Median Filter Applied")
 
     def apply_min_filter(self):
-        self.apply_non_linear_filter(lambda x: minimum_filter(x, size=3), "Min Filter Applied")
+        kernel = np.ones((self.filter_size, self.filter_size), np.uint8)
+        result = cv2.erode(self.image, kernel)
+        self.display_filtered_image(result, "Min Filter Applied")
 
     def apply_max_filter(self):
-        self.apply_non_linear_filter(lambda x: maximum_filter(x, size=3), "Max Filter Applied")
+        kernel = np.ones((self.filter_size, self.filter_size), np.uint8)
+        result = cv2.dilate(self.image, kernel)
+        self.display_filtered_image(result, "Max Filter Applied")
 
     def apply_filter(self, kernel, message, return_image=False):
         if self.image is None:
             QMessageBox.warning(self, "Error", "No image imported!")
             return
+
         gray_image = self.qimage_to_gray_array(self.image)
-        filtered_array = convolve(gray_image, kernel, mode='constant', cval=0.0)
+        filtered_array = cv2.filter2D(src=gray_image, ddepth=-1, kernel=kernel)
 
         if return_image:
-            return filtered_array  # Trả về ảnh đã lọc nếu yêu cầu
+            return filtered_array  # Return the filtered image if requested
 
         self.display_filtered_image(filtered_array, message)
 
@@ -304,9 +289,28 @@ class ImageFilterApp(QMainWindow):
         if self.image is None:
             QMessageBox.warning(self, "Error", "No image imported!")
             return
+
         gray_image = self.qimage_to_gray_array(self.image)
         filtered_array = func(gray_image)
         self.display_filtered_image(filtered_array, message)
+
+    def apply_median_filter(self):
+        self.apply_non_linear_filter(
+            lambda x: cv2.medianBlur(x, ksize=self.filter_size),
+            "Median Filter Applied"
+        )
+
+    def apply_min_filter(self):
+        self.apply_non_linear_filter(
+            lambda x: cv2.erode(x, kernel=np.ones((self.filter_size, self.filter_size), np.uint8)),
+            "Min Filter Applied"
+        )
+
+    def apply_max_filter(self):
+        self.apply_non_linear_filter(
+            lambda x: cv2.dilate(x, kernel=np.ones((self.filter_size, self.filter_size), np.uint8)),
+            "Max Filter Applied"
+        )
 
     def open_multi_filter_dialog(self):
         if self.image is None:
@@ -315,19 +319,6 @@ class ImageFilterApp(QMainWindow):
 
         dialog = MultiFilterDialog(self)
         dialog.exec_()
-
-    def apply_custom_multi_filters(self, filters):
-        if self.image is None:
-            QMessageBox.warning(self, "Error", "No image imported!")
-            return
-
-        gray_image = self.qimage_to_gray_array(self.image)
-        filtered_image = gray_image.copy()
-
-        for i, kernel in enumerate(filters):
-            filtered_image = convolve(filtered_image, kernel, mode='constant', cval=0.0)
-
-        self.display_filtered_image(filtered_image, f"{len(filters)} Custom Filters Applied")
 
     def display_filtered_image(self, filtered_array, message):
         filtered_qimage = self.array_to_qimage(filtered_array)
@@ -339,12 +330,19 @@ class ImageFilterApp(QMainWindow):
         ptr = image.bits()
         ptr.setsize(image.bytesPerLine() * image.height())
         arr = np.array(ptr).reshape((image.height(), image.bytesPerLine() // 4, 4))
-        return np.dot(arr[..., :3], [0.2989, 0.5870, 0.1140])
+        return cv2.cvtColor(arr[..., :3].astype(np.uint8), cv2.COLOR_RGB2GRAY)
 
     def array_to_qimage(self, array):
         array = np.clip(array, 0, 255).astype(np.uint8)
         height, width = array.shape
         return QImage(array.data, width, height, QImage.Format_Grayscale8)
+
+    def array_to_pixmap(self, array):
+        array = np.clip(array, 0, 255).astype(np.uint8)
+        height, width = array.shape
+        bytes_per_line = width
+        q_image = QImage(array.data, width, height, bytes_per_line, QImage.Format_Grayscale8)
+        return QPixmap.fromImage(q_image)
 
 
 def main():
