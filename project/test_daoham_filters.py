@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from linear_filters_new import sobel_filter, laplace_filter
 
 # Đọc ảnh đầu vào (ảnh màu BGR)
-image = cv2.imread('objet.jpg', cv2.IMREAD_COLOR)
+image = cv2.imread('FEMME-NOISE.png', cv2.IMREAD_COLOR)
 
 # Áp dụng Sobel filter theo X, Y và kết hợp
 sobel_x = sobel_filter(image, axis=0)
